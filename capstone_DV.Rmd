@@ -1,0 +1,609 @@
+---
+title: "capstone_DV"
+author: "Takdir Zulhaq Dessiaming"
+date: "2022-08-04"
+
+output: 
+ html_document:
+   toc: true
+   toc_float: true
+   highlight: zenburn
+   df_print: paged
+   theme: flatly
+---
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# LIBRARY
+
+```{r}
+
+library(echarts4r)
+library(highcharter)
+library(tidyverse)  
+library(devtools)
+# library(scales)
+library(dplyr)
+# library(ggplot2)
+# library(plotly)
+# library(tidyr)
+library(glue)
+library(lubridate)
+
+```
+# THEME
+
+```{r}
+# install.packages("devtools")
+# devtools::install_github("JohnCoene/echarts4r")
+
+```
+# READ DATA
+
+```{r}
+stats <- read.csv("ucl_stats.csv")
+stats
+```
+# DATA CLEANING
+
+```{r}
+
+levels(stats$team)
+stats$team <- trimws(stats$team, which = c("both"))
+
+stats <- stats %>% 
+  select(-gd) %>% 
+  mutate(
+    year = as.factor(year),
+    team = as.factor(team),
+    champs = as.factor(case_when(champions == 1 ~ "Champion", 
+                               champions != 1 ~ "No"))
+  )
+
+
+str(stats)
+
+```
+# ANALYSIS
+
+## SCORED
+
+```{r}
+# SCORED
+
+  top_goals <- stats %>% 
+    
+    group_by(team) %>% 
+    summarise(total_goals = sum(goals_scored)) %>% 
+    ungroup() %>% 
+    arrange(-total_goals) %>%  
+    slice_head(n=10) 
+
+
+# top10_goals <- pivot_longer(data = top10_goals,
+#                     cols = c("wins", "draws", "losts"))
+top_goals
+```
+
+
+
+```{r}
+  top_goals %>% 
+    arrange(total_goals) %>% 
+    e_chart(x = team) %>% 
+    e_bar(total_goals, legend = F, name = "Scored") %>%
+    e_grid(left = "20%") %>% 
+    e_color("#588dd5") %>% 
+    e_theme_custom("walden.json") %>% 
+    e_tooltip() %>%
+    e_title("Top 10 Team with Most Goal Scored All Time", "UEFA Champions League Season 1992-1993 to 2019-2020") %>% 
+    e_flip_coords() %>%
+    e_y_axis(splitLine = list(show = F)) %>%
+    e_x_axis(show = FALSE) 
+
+```
+
+
+
+```{r}
+# MATCH RESULTS
+# top10_goals <- stats %>% 
+#   
+#   group_by(team, wins,draws,losts) %>% 
+#   summarise(Total_Goals = sum(goals_scored)) %>% 
+#   ungroup()
+# 
+# 
+# top10_goals <- pivot_longer(data = top10_goals,
+#                     cols = c("wins", "draws", "losts"))
+# top10_goals
+```
+
+## CONCEDED 
+```{r}
+# CONCEDED 
+
+  top_con <- stats %>% 
+    
+    group_by(team) %>% 
+    summarise(total_conceded = sum(goals_conceded)) %>% 
+    ungroup() %>% 
+    arrange(-total_conceded) %>%  
+    slice_head(n=10)
+
+
+# top10_goals <- pivot_longer(data = top10_goals,
+#                     cols = c("wins", "draws", "losts"))
+top_con
+
+```
+
+```{r}
+
+  top_con %>% 
+    arrange(total_conceded) %>% 
+    e_chart(x = team) %>% 
+    e_bar(total_conceded, legend = F, name = "Conceded") %>% 
+    e_grid(left = "20%") %>% 
+    e_color("#c05050") %>% 
+    e_theme_custom("walden.json") %>% 
+    e_tooltip() %>%
+    e_title("Top 10 Team with Most Goal Conceded All Time", "UEFA Champions League Season 1992-1993 to 2019-2020") %>% 
+    e_flip_coords() %>%
+    e_y_axis(splitLine = list(show = F)) %>%
+    e_x_axis(show = FALSE)
+```
+
+# MATCH RESULT
+```{r}
+# MU 
+    mu <- stats %>% 
+      filter(team == "Manchester United") %>% 
+      group_by(team) %>% 
+      summarise(wins = sum(wins),
+                draws = sum(draws),
+                losts = sum(losts)) %>% 
+      ungroup()
+    mu$team <-  droplevels(mu$team)
+    
+    
+    mu_result <- pivot_longer(data = mu,
+                              cols = c("wins", "draws","losts"))
+    mu_result <- mu_result %>% rename(Total = value)  
+    mu_result
+```
+
+
+```{r}
+
+# MU
+    mu_result %>% 
+      e_charts(name) %>% 
+      e_bar(Total) %>% 
+      e_tooltip(
+        trigger = "axis",
+        axisPointer = list(
+          type = "shadow"
+        )
+      ) %>% 
+      e_title(
+        text = glue('Manchester United Match Results All Time'),left = "center",
+        subtext = 'UEFA Champions League from 1993-2020'
+      ) %>% 
+      e_legend(show = F) %>% 
+      e_theme_custom("walden.json") %>% 
+      e_y_axis(
+        splitArea = list(show = FALSE),
+        splitLine = list(show = FALSE)
+      )
+```
+# GOAL PERFORMANCE
+
+```{r}
+
+    mug <- stats %>% 
+      filter(team == "Manchester United") %>% 
+      group_by(year, team) %>% 
+      summarise(goals_scored = sum(goals_scored),
+                goals_conceded = sum(goals_conceded)) %>% 
+      ungroup()
+    
+    mug$team <-  droplevels(mug$team)
+    
+    mug <- mug %>% rename(Scored = goals_scored)
+    mug <- mug %>% rename(Conceded = goals_conceded)
+    
+    mug_result <- pivot_longer(data = mug,
+                               cols = c("Scored", "Conceded"))
+    mug_result <- mug_result %>% rename(Total = value) 
+    
+    mug_result <- mug_result %>% 
+      group_by(name) %>% 
+      arrange(year) %>% 
+      mutate(
+        name = as.factor(name)
+      )
+mug_result
+```
+
+
+```{r}
+
+    max <- list(
+      name = "Max",
+      type = "max"
+    )
+    min <- list(
+      name = "Min",
+      type = "min"
+    )
+    
+    mug_result %>%  
+      e_charts(year) %>% 
+      #   e_datazoom(
+      #   type = "slider", 
+      #   toolbox = FALSE,
+      #   bottom = -5
+      # ) %>% 
+      e_line(Total) %>%
+      e_legend(show=F) %>% 
+      e_tooltip() %>% 
+      e_mark_point(data = max) %>% 
+      e_mark_point(data = min) %>% 
+      e_title(
+        text = glue('Manchester United Goal Performance All Time'), left = "center",
+        subtext = 'UEFA Champions League from 1993-2020'
+      ) %>% 
+      e_theme_custom("walden.json") %>% 
+      e_x_axis(year, axisPointer = list(show = TRUE)) %>% 
+      e_y_axis(
+        splitArea = list(show = FALSE),
+        splitLine = list(show = FALSE)
+      ) %>% 
+      e_color(c("#c05050","#588dd5"))
+
+```
+
+
+# HEAD TO HEAD
+
+## MATCH RESULT
+```{r}
+# MATCH RESULT
+
+# CHELSEA
+  # TEAM 1
+  ce <- stats %>% 
+    filter(team == "Chelsea" & year == 2016) %>% 
+    group_by(team) %>% 
+    summarise(wins = sum(wins),
+              draws = sum(draws),
+              losts = sum(losts)) %>% 
+    ungroup()
+  ce$team <-  droplevels(ce$team)
+  
+  
+  ce_result <- pivot_longer(data = ce,
+                            cols = c("wins", "draws","losts"))
+  ce_result <- ce_result %>% rename(Total = value)   
+  ce_result
+
+
+# Real Madrid
+  # TEAM 2
+  rm <- stats %>% 
+    filter(team == "Real Madrid" & year == 2016) %>% 
+    group_by(team) %>% 
+    summarise(wins = sum(wins),
+              draws = sum(draws),
+              losts = sum(losts)) %>% 
+    ungroup()
+  rm$team <-  droplevels(rm$team)
+  
+  
+  rm_result <- pivot_longer(data = rm,
+                            cols = c("wins", "draws","losts"))
+  
+  rm_result <- rm_result %>% rename(Total = value) 
+  rm_result
+  
+  # JOIN
+  
+  hth <- full_join(ce_result,rm_result)
+  hth
+
+```
+
+```{r}
+  hth %>% 
+    group_by(team) %>% 
+    e_charts(name) %>% 
+    e_bar(Total, stack = "grp2") %>% 
+    e_tooltip(
+      trigger = "axis",
+      axisPointer = list(
+        type = "shadow"
+      )
+    ) %>% 
+    e_theme_custom("walden.json") %>% 
+    e_title(
+      text = glue('Chelsea vs Real Madrid '),left = "center",
+      subtext = ' Match Result UEFA Champions League from 1993-2020',
+      left = "center"
+    ) %>% 
+    e_legend(show=F)
+ 
+
+
+```
+
+
+## GOALS
+
+```{r}
+# CHELSEA
+    # TEAM 1
+    ceg <- stats %>% 
+      filter(team == "Chelsea" ) %>% 
+      #filter(team == "Chelsea" & (year >= 2015 & year <= 2016)) %>% 
+      group_by(year, team) %>% 
+      summarise(goals_scored = sum(goals_scored),
+                goals_conceded = sum(goals_conceded)) %>% 
+      ungroup()
+    ceg$team <-  droplevels(ceg$team)
+    
+    ceg <- ceg %>% rename(Scored = goals_scored)
+    ceg <- ceg %>% rename(Conceded = goals_conceded)
+    
+    ceg_result <- pivot_longer(data = ceg,
+                               cols = c("Scored", "Conceded"))
+    ceg_result <- ceg_result %>% rename(Total = value) 
+    
+    ceg_result <- ceg_result %>% 
+      group_by(name) %>% 
+      arrange(year) 
+```
+
+```{r}
+
+# REAL MADRID
+    # TEAM 2
+    rmg <- stats %>% 
+      filter(team == "Real Madrid" ) %>% 
+      group_by(year, team) %>% 
+      summarise(goals_scored = sum(goals_scored),
+                goals_conceded = sum(goals_conceded)) %>% 
+      ungroup()
+    rmg$team <-  droplevels(rmg$team)
+    
+    rmg <- rmg %>% rename(Scored = goals_scored)
+    rmg <- rmg %>% rename(Conceded = goals_conceded)
+    
+    rmg_result <- pivot_longer(data = rmg,
+                               cols = c("Scored", "Conceded"))
+    rmg_result <- rmg_result %>% rename(Total = value)  
+
+```
+
+### CHELSEA GOAL
+
+```{r}
+
+    max <- list(
+      name = "Max",
+      type = "max"
+    )
+    min <- list(
+      name = "Min",
+      type = "min"
+    )
+    
+    ceg_result %>%
+      e_charts(year) %>% 
+      #   e_datazoom(
+      #   type = "slider", 
+      #   toolbox = FALSE,
+      #   bottom = -5
+      # ) %>% 
+      
+      e_line(Total, legend = T)   %>% 
+      e_mark_point(data = max) %>% 
+      e_mark_point(data = min) %>% 
+      e_tooltip() %>% 
+      e_title(
+        text = glue('Chelsea Goal Performance'), left = "center"
+      ) %>% 
+      e_theme_custom("walden.json") %>% 
+      e_x_axis(year, axisPointer = list(show = TRUE)) %>% 
+      e_y_axis(
+        splitArea = list(show = FALSE),
+        splitLine = list(show = FALSE)
+      ) %>% 
+      e_legend(show=F) %>% 
+      e_color(c("#c05050","#588dd5"))
+```
+
+### REAL MADRID GOAL
+
+```{r}
+    max <- list(
+      name = "Max",
+      type = "max"
+    )
+    min <- list(
+      name = "Min",
+      type = "min"
+    )
+    
+    rmg_result <- rmg_result %>% 
+      group_by(name) %>% 
+      arrange(year) 
+    
+    rmg_result %>%
+      e_charts(year) %>% 
+      #   e_datazoom(
+      #   type = "slider", 
+      #   toolbox = FALSE,
+      #   bottom = -5
+      # ) %>% 
+      
+      e_line(Total, legend = T)   %>% 
+      e_mark_point(data = max) %>% 
+      e_mark_point(data = min) %>% 
+      e_tooltip() %>% 
+      e_title(
+        text = glue('Real Madrid Goal Performance'),left = "center"
+      ) %>% 
+      e_theme_custom("walden.json") %>% 
+      e_x_axis(year, axisPointer = list(show = TRUE)) %>% 
+      e_y_axis(
+        splitArea = list(show = FALSE),
+        splitLine = list(show = FALSE)
+        
+      ) %>% 
+      e_legend(show=F)%>% 
+      e_color(c("#c05050","#588dd5"))
+```
+
+
+# GROUP POINTS
+
+```{r}
+    points <- stats %>% 
+    select(c(year, team, group_point, champions)) %>% 
+    filter(year == 2016) %>% 
+    group_by(year) %>% 
+    arrange(-group_point) %>% 
+    slice_head(n =10)
+```
+
+```{r}
+  points %>%
+    arrange(group_point) %>%
+    e_chart(x = team) %>%
+    e_bar(group_point, legend = F, name = "Points") %>%
+    e_theme_custom("walden.json") %>%
+    e_grid(left = "20%") %>%
+    e_tooltip(trigger = "item") %>%
+    e_title("Top 10 Team points obtained in the group stage in a season", glue("UEFA Champions League Season 2016")) %>%
+    e_flip_coords() %>%
+    e_y_axis(splitLine = list(show = F)) %>%
+    e_x_axis(show = FALSE)
+```
+```{r}
+#     hc <- points %>%
+#       hchart(
+#         "wordcloud", 
+#         hcaes(name = team, weight = group_point)) %>% 
+#       hc_title(text = "All Team points obtained in the group stage in a season", align = "left", style = list(color = "black",fontFamily = "helvetica", fontWeight = "bold")) 
+# hc
+    
+```
+
+# TOP CHAMPIONS
+
+```{r}
+
+
+
+  top_champ <- stats %>% 
+    
+    group_by(team) %>% 
+    summarise(champions = sum(champions)) %>% 
+    ungroup() %>% 
+    arrange(-champions) %>%  
+    slice_head(n=10) 
+
+```
+```{r}
+  top_champ %>%
+    arrange(champions) %>%
+    e_chart(x = team) %>%
+    e_bar(champions, legend = F, name = "Total Champions") %>%
+    e_theme_custom("walden.json") %>%
+    e_grid(left = "20%") %>%
+    e_tooltip(trigger = "item") %>%
+    e_title("Top 10 teams with the most champions", "UEFA Champions League Season 1992-1993 to 2019-2020") %>%
+    e_flip_coords() %>%
+    e_y_axis(splitLine = list(show = F)) %>%
+    e_x_axis(show = FALSE)
+```
+
+<!-- # VALUE BOX HEAD TO HEAD GOAL -->
+
+<!-- ```{r} -->
+<!-- # CHELSEA -->
+<!--   # TEAM 1 -->
+<!--   cevb <- stats %>%  -->
+<!--     filter(team == "Chelsea") %>%  -->
+<!--     group_by(team) %>%  -->
+<!--     summarise(wins = sum(wins), -->
+<!--               draws = sum(draws), -->
+<!--               losts = sum(losts)) %>%  -->
+<!--     ungroup() -->
+<!--   cevb$team <-  droplevels(cevb$team) -->
+
+
+<!--   cevb_result <- pivot_longer(data = cevb, -->
+<!--                             cols = c("wins", "draws","losts")) -->
+<!--   cevb_result <- cevb_result %>% rename(Total = value)    -->
+<!--   cevb_result -->
+
+
+<!-- # Real Madrid -->
+<!--   # TEAM 2 -->
+<!--   rmvb <- stats %>%  -->
+<!--     filter(team == "Real Madrid") %>%  -->
+<!--     group_by(team) %>%  -->
+<!--     summarise(wins = sum(wins), -->
+<!--               draws = sum(draws), -->
+<!--               losts = sum(losts)) %>%  -->
+<!--     ungroup() -->
+<!--   rmvb$team <-  droplevels(rmvb$team) -->
+
+
+<!--   rmvb_result <- pivot_longer(data = rmvb, -->
+<!--                             cols = c("wins", "draws","losts")) -->
+
+<!--   rmvb_result <- rmvb_result %>% rename(Total = value)  -->
+<!--   rmvb_result -->
+
+<!--   # JOIN -->
+
+<!--   hthvb <- full_join(cevb_result,rmvb_result) -->
+<!--   hthvb -->
+<!-- ``` -->
+<!-- ```{r} -->
+<!-- hthvbv <- hthvb %>%  -->
+<!--   hchart('column', hcaes(x = 'name', y = 'Total', group = 'team')) %>% -->
+<!--   hc_colors(c("#0073C2FF", "#EFC000FF")) %>%  -->
+<!--   hc_xAxis(visible =F) -->
+<!-- hthvbv -->
+
+<!-- ``` -->
+
+<!-- # VALUE BOX HEAD TO HEAD CHAMP -->
+
+<!-- ```{r} -->
+<!-- rm <- stats %>%  -->
+<!--   filter(team == "Real Madrid") %>%  -->
+<!--   group_by(year, champions) %>% -->
+<!--   summarise(champions = sum(champions)) %>%  -->
+<!--   ungroup() -->
+
+<!-- rmc <- stats %>%  -->
+<!--   filter(team == "Real Madrid") %>%  -->
+<!--   summarise(champions = sum(champions)) %>%  -->
+<!--   ungroup() -->
+
+<!-- rmh <- hchart(rm, "line", hcaes(year, champions), name = "Champion")  %>%  -->
+<!--       hc_size(height = 100) %>%  -->
+<!--       hc_credits(enabled = FALSE) %>%  -->
+<!--       hc_add_theme(hc_theme_sparkline_vb()) -->
+<!-- rmh -->
+<!-- ``` -->
+
+

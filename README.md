@@ -1,4 +1,5 @@
 # UCL Dashboard
+<img src="https://storage.googleapis.com/kaggle-datasets-images/1365485/2268071/09c0e1d927c26dc22a88d36a8833de8b/dataset-cover.jpg?t=2021-05-25-09-08-02">
 
 ## Introduction
 Projek ini dikembangkan sebagai salah satu capstone project dari Algoritma Academy Data Analytics Specialization. Deliverables yang diharapkan adalah dapat membangun sebuah aplikasi web sederhana (dashboard) menggunakan Shiny Apps. 
